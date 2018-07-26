@@ -145,4 +145,54 @@ OSG内置的数组类型应该从堆上创建并使用智能指针管理。然�
 
 ## 4.5 顶点与顶点属性
 
-顶点是几何图元的基本元素，它使用若干数值属性描述一个2D或3D空间的点，这些属性包括顶点位置、颜色、法线以及纹理坐标、雾坐标等等。位置值是必需的，其他属性用来辅助定义点的特性。
+顶点是几何图元的基本元素，它使用若干数值属性描述一个2D或3D空间的点，这些属性包括顶点位置、颜色、法线以及纹理坐标、雾坐标等等。位置值是必需的，其他属性用来辅助定义点的特性。OpenGL允许为每个顶点指定多达16个通用属性，并可以使用不同的方式创建和存储它们。类 `osg::geometry` 支持所有的属性数组，可通过对应的 `set*Array()` 函数进行设置。
+
+OpenGL内置的顶点属性如下表所示：
+
+| Attribute | Suggested data type | osg::Geometry method | Equivalent OpenGL call |
+| --- | --- | --- | --- |
+| Position | 3D vectors | setVertextArray() | glVertexPointer() |
+| Normal | 3D vectors normalized to the range [0, 1] | setNormalArray() | glNormalPointer |
+| Color | 4D vectors normalized to the range [0, 1] | setColorArray() |  glColorPointer|
+| Secondary color | 4D vectors normalized to the range [0, 1] | setSecondaryColorArray() | glSecondaryColorPointerEXT() |
+| Fog coordinate | Float values | setFogCoordArray() | glFogCoordPointerEXT() |
+| Texture coordinate | 2D or 3D vectors | setTexCoordArray() | glTesCoordPointer() |
+| Other general attributes | User-defined values | setVertexAttribArray() | glVertexAttribPointerEXT() |
+
+在当前的OpenGL图形系统中，一个顶点通常包含8个纹理坐标和三个通用属性。原则上，应该为每个顶点的所有属性都设置具体的值，形成一组具有完全相同大小的数组，否则未定义的属性可能会引起意料之外的问题。OSG提供了绑定函数使得为顶点指定属性这一工作变得方便简单[^1]。例如，`geom` 为类 `osg::Geometry` 的对象，开发者以一个枚举值为参数调用此类的共有函数 `setColorBinding()`：
+
+```c++
+geom->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+```
+
+这句代码表明颜色和顶点被设置成一对一的对应关系。然而，来看下面的代码：
+
+```c++
+geom->setColorBinding(osg::Geomtry::BIND_OVERALL);
+```
+
+这将会用一个单一颜色值应用到整个几何对象上。此外还有 `setNormalBinding()`、`setSecondaryColorBinding()`、`setFogColorBinding()` 和 `setVertexAttribBinding()` 函数为其他类型属性做类似的绑定工作。
+
+[^1]: 译者注-本文提到的顶点属性绑定函数已经标记为过时。
+
+## 4.6 指定绘制类型
+
+设置完顶点的属性数组后，下一步就要告诉 `osg::Geometry` 对象如何渲染它们。虚基类 `osg::PrimitiveSet` 就是用来管理 **几何基元 (geometry primitive)** 组的，几何基元记录了顶点的绘制顺序信息。类 `osg::Geometry` 提供了一些公共函数来操作一个或多个几何基元组：
+
+1. 函数 `addPrimitiveSet()` 以一个 `osg::PrimitiveSet` 类指针为参数并将此基元组绑定到 `osg::Geometry` 对象上。
+2. 函数 `removePrimitiveSet()` 需要两个参数，一个为基于0的索引值，另一个是需要删除的基元组的个数。它能移除一个或多个已绑定的基元组。
+3. 函数 `getPrimitiveSet()` 返回特定索引位置的 `osg::PrimitiveSet` 对象的指针。
+4. 函数 `getNumPrimitiveSets()` 返回基元组的总数。
+
+类 `osg::PrimitiveSet` 是不能被直接实例化的，但它有一些子类用来封装OpenGL的 `glDrawArrays()` 和 `glDrawElements()` 函数入口，例如 `osg::DrawArrays` 类和 `osg::DrawElementsUInt` 类。
+
+类 `osg::DrawArrays` 使用 **顶点数组 (vertex array)** 中若干元素序列来构造一系列 **几何基元 (geometry primitives)**。可以使用如下代码创建此类对象并将其绑定到 `osg::Geometry` 对象 `geom`上：
+
+```c++
+geom->addPrimitiveSet(new osg::DrawArrays(mode, first, count);
+```
+
+第一个参数 `mode` 指定了绘制何种基元。如同OpenGL的 `glDrawArrays()` 接口一样，`osg::DrawArrays` 可接受10种基元类型：`GL_POINTS`，`GL_LINE_STRIP`，`GL_LINE_LOOP`，`GL_LINES`，`GL_TRIANGLE_STRIP`，`GL_TRIANGLE_FAN`，`GL_TRIANGLES`，`GL_QUAD_STRIP`，`GL_QUADS` 和 `GL_POLYGON`。
+
+第二和第三个参数指定了基元组起始于索引 *`first`* 处并共有 *`count`* 个元素。开发者应该保证顶点数组内至少有 *`first + count`* 个元素。OSG不会检查顶点个数是否满足几何基元组的需求，如不满足将会引发程序崩溃。
+
