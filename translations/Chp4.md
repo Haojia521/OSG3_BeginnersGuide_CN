@@ -173,7 +173,7 @@ geom->setColorBinding(osg::Geomtry::BIND_OVERALL);
 
 这将会用一个单一颜色值应用到整个几何对象上。此外还有 `setNormalBinding()`、`setSecondaryColorBinding()`、`setFogColorBinding()` 和 `setVertexAttribBinding()` 函数为其他类型属性做类似的绑定工作。
 
-[^1] : 译者注-本文提到的顶点属性绑定函数已经标记为过时。
+[^1]: 译者注-本文提到的顶点属性绑定函数已经标记为过时。
 
 ## 4.6 指定绘制类型
 
