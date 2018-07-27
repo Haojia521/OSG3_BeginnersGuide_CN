@@ -159,7 +159,7 @@ OpenGL内置的顶点属性如下表所示：
 | Texture coordinate | 2D or 3D vectors | setTexCoordArray() | glTesCoordPointer() |
 | Other general attributes | User-defined values | setVertexAttribArray() | glVertexAttribPointerEXT() |
 
-在当前的OpenGL图形系统中，一个顶点通常包含8个纹理坐标和三个通用属性。原则上，应该为每个顶点的所有属性都设置具体的值，形成一组具有完全相同大小的数组，否则未定义的属性可能会引起意料之外的问题。OSG提供了绑定函数使得为顶点指定属性这一工作变得方便简单[^1]。例如，`geom` 为类 `osg::Geometry` 的对象，开发者以一个枚举值为参数调用此类的共有函数 `setColorBinding()`：
+在当前的OpenGL图形系统中，一个顶点通常包含8个纹理坐标和三个通用属性。原则上，应该为每个顶点的所有属性都设置具体的值，形成一组具有完全相同大小的数组，否则未定义的属性可能会引起意料之外的问题。OSG提供了绑定函数使得为顶点指定属性这一工作变得方便简单。例如，`geom` 为类 `osg::Geometry` 的对象，开发者以一个枚举值为参数调用此类的共有函数 `setColorBinding()`：
 
 ```c++
 geom->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
@@ -173,7 +173,7 @@ geom->setColorBinding(osg::Geomtry::BIND_OVERALL);
 
 这将会用一个单一颜色值应用到整个几何对象上。此外还有 `setNormalBinding()`、`setSecondaryColorBinding()`、`setFogColorBinding()` 和 `setVertexAttribBinding()` 函数为其他类型属性做类似的绑定工作。
 
-[^1]: 译者注-本文提到的顶点属性绑定函数已经标记为过时。
+*（译者注：本文提到的顶点属性绑定函数已经标记为过时。）*
 
 ## 4.6 指定绘制类型
 
