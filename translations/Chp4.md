@@ -107,9 +107,9 @@ return viewer.run();
 
 ![](../images/Chp4/Chp4-1.png)
 
-#### *到底发生了什么*
+#### *到底发生了什么？*
 
-在需要快速显示图形时 `osg::ShapeDrawable` 类非常有用，但这并不是高效的 **几何基元 (geometry primitives)** 绘制方式。当你开发3D应用过程中，它应该仅在原型设计或调试时使用。如要创建能满足高效计算和可视化性能的几何图形，接下来即将介绍的 `osg::Geometry` 类永远是更好的选择。
+在需要快速显示图形时 `osg::ShapeDrawable` 类非常有用，但这并不是高效的 **几何图元 (geometry primitives)** 绘制方式。当你开发3D应用过程中，它应该仅在原型设计或调试时使用。如要创建能满足高效计算和可视化性能的几何图形，接下来即将介绍的 `osg::Geometry` 类永远是更好的选择。
 
 OSG拥有一个内部类 `osg::GLBeginEndAdapter`，它被用来执行基本的图形绘制操作。这个类能够将 **顶点数组 (vertex arrays)** 转为使用 `glBegin()` 和 `glEnd()` 函数对的形式，这种形式将基本图形的具体实现变得易于理解和扩展。
 
@@ -173,26 +173,106 @@ geom->setColorBinding(osg::Geomtry::BIND_OVERALL);
 
 这将会用一个单一颜色值应用到整个几何对象上。此外还有 `setNormalBinding()`、`setSecondaryColorBinding()`、`setFogColorBinding()` 和 `setVertexAttribBinding()` 函数为其他类型属性做类似的绑定工作。
 
-[^1]: 译者注-本文提到的顶点属性绑定函数已经标记为过时。
+[^1] : 译者注-本文提到的顶点属性绑定函数已经标记为过时。
 
 ## 4.6 指定绘制类型
 
-设置完顶点的属性数组后，下一步就要告诉 `osg::Geometry` 对象如何渲染它们。虚基类 `osg::PrimitiveSet` 就是用来管理 **几何基元 (geometry primitive)** 组的，几何基元记录了顶点的绘制顺序信息。类 `osg::Geometry` 提供了一些公共函数来操作一个或多个几何基元组：
+设置完顶点的属性数组后，下一步就要告诉 `osg::Geometry` 对象如何渲染它们。虚基类 `osg::PrimitiveSet` 就是用来管理 **几何图元 (geometry primitive)** 组的，几何图元记录了顶点的绘制顺序信息。类 `osg::Geometry` 提供了一些公共函数来操作一个或多个几何图元：
 
-1. 函数 `addPrimitiveSet()` 以一个 `osg::PrimitiveSet` 类指针为参数并将此基元组绑定到 `osg::Geometry` 对象上。
-2. 函数 `removePrimitiveSet()` 需要两个参数，一个为基于0的索引值，另一个是需要删除的基元组的个数。它能移除一个或多个已绑定的基元组。
+1. 函数 `addPrimitiveSet()` 以一个 `osg::PrimitiveSet` 类指针为参数并将此图元绑定到 `osg::Geometry` 对象上。
+2. 函数 `removePrimitiveSet()` 需要两个参数，一个为基于0的索引值，另一个是需要删除的图元的个数。它能移除一个或多个已绑定的图元。
 3. 函数 `getPrimitiveSet()` 返回特定索引位置的 `osg::PrimitiveSet` 对象的指针。
-4. 函数 `getNumPrimitiveSets()` 返回基元组的总数。
+4. 函数 `getNumPrimitiveSets()` 返回图元的总数。
 
 类 `osg::PrimitiveSet` 是不能被直接实例化的，但它有一些子类用来封装OpenGL的 `glDrawArrays()` 和 `glDrawElements()` 函数入口，例如 `osg::DrawArrays` 类和 `osg::DrawElementsUInt` 类。
 
-类 `osg::DrawArrays` 使用 **顶点数组 (vertex array)** 中若干元素序列来构造一系列 **几何基元 (geometry primitives)**。可以使用如下代码创建此类对象并将其绑定到 `osg::Geometry` 对象 `geom`上：
+类 `osg::DrawArrays` 使用 **顶点数组 (vertex array)** 中若干元素序列来构造一系列 **几何图元 (geometry primitives)**。可以使用如下代码创建此类对象并将其绑定到 `osg::Geometry` 对象 `geom`上：
 
 ```c++
 geom->addPrimitiveSet(new osg::DrawArrays(mode, first, count);
 ```
 
-第一个参数 `mode` 指定了绘制何种基元。如同OpenGL的 `glDrawArrays()` 接口一样，`osg::DrawArrays` 可接受10种基元类型：`GL_POINTS`，`GL_LINE_STRIP`，`GL_LINE_LOOP`，`GL_LINES`，`GL_TRIANGLE_STRIP`，`GL_TRIANGLE_FAN`，`GL_TRIANGLES`，`GL_QUAD_STRIP`，`GL_QUADS` 和 `GL_POLYGON`。
+第一个参数 `mode` 指定了绘制何种图元。如同OpenGL的 `glDrawArrays()` 接口一样，`osg::DrawArrays` 可接受10种图元类型：`GL_POINTS`，`GL_LINE_STRIP`，`GL_LINE_LOOP`，`GL_LINES`，`GL_TRIANGLE_STRIP`，`GL_TRIANGLE_FAN`，`GL_TRIANGLES`，`GL_QUAD_STRIP`，`GL_QUADS` 和 `GL_POLYGON`。
 
-第二和第三个参数指定了基元组起始于索引 *`first`* 处并共有 *`count`* 个元素。开发者应该保证顶点数组内至少有 *`first + count`* 个元素。OSG不会检查顶点个数是否满足几何基元组的需求，如不满足将会引发程序崩溃。
+第二和第三个参数指定了图元起始于索引 *`first`* 处并共有 *`count`* 个元素。开发者应该保证顶点数组内至少有 *`first + count`* 个元素。OSG不会检查顶点个数是否满足几何图元的需求，如不满足将会引发程序崩溃。
+
+### 动手实践：绘制一个彩色的四边形
+
+让我们从一个常规图形做起来看看完成一个可绘制的几何模型有哪些步骤。我们将创建一个四边形，仅用四个顶点作为它的角点即可，并使用 `GL_QUADS` 模式绘制这些顶点。`GL_QUADS` 模式告诉OpenGL将顶点数组的第一组四个坐标组合为一个四元组，第二组四个坐标为一个四元组，以此类推。
+
+1. 包含必要的头文件
+    ```c++
+    #include <osg/Geometry>
+    #include <osg/Geode>
+    #include <osgViewer/Viewer>
+    ```
+
+2. 创建顶点数组并使用类似 `std::vector` 的操作将四个角点依次放入数组尾部。
+
+    ```c++
+    osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array;
+    vertices->push_back(osg::Vec3(0.0f, 0.0f, 0.0f));
+    vertices->push_back(osg::Vec3(1.0f, 0.0f, 0.0f));
+    vertices->push_back(osg::Vec3(1.0f, 0.0f, 1.0f));
+    vertices->push_back(osg::Vec3(0.0f, 0.0f, 1.0f));
+    ```
+
+3. 我们需要为每个顶点指定法向量，否则OpenGL将会使用默认值(0, 0, 1)且会得到错误的光照计算结果。这四个顶点实际上面向同一方向，所以一个法向量就足够了。我们后续还要使用 `BIND_OVERALL` 调用函数 `setNormalBinding()` 使法向量属性正确绑定到顶点。
+
+    ```c++
+    osg::ref_ptr<osg::Vec3Array> normals = new osg::Vec3Array;
+    normals->push_back(osg::Vec3(0.0f, -1.0f, 0.0f));
+    ```
+
+4. 为每个顶点定义一个唯一的颜色值来使其着色。默认情况下，OpenGL会使用平滑的着色方式并将每个顶点的颜色混合在一起：
+
+    ```c++
+    osg::ref_ptr<osg::Vev4Array> colors = new osg::Vec4Array;
+    colors->push_back(osg::Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+    colors->push_back(osg::Vec4(0.0f, 1.0f, 0.0f, 1.0f));
+    colors->push_back(osg::Vec4(0.0f, 0.0f, 1.0f, 1.0f));
+    colors->push_back(osg::Vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    ```
+
+5. 接下来我们创建 `osg::Geometry` 对象并将预先准备好的顶点数组、法向量数组和颜色数组设置给它。同时要指定单个法向量应该被绑定到整个集合对象上，颜色值应被绑定到对应顶点上。
+
+    ```c++
+    osg::ref_ptr<osg::Geometry> quad = new osg::Geometry;
+    quad->setVertexArray(vertices.get());
+    quad->setNormalArray(normals.get());
+    quad->setNormalBinding(osg::Geometry::BIND_OVERALL);
+    quad->setColorArray(colors.get());
+    quad->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
+    ```
+6. 将几何对象放入场景前所需的最后一步是指定几何图元。这里使用具有 `GL_QUADS` 模式的 `osg::DrawArrays` 对象实例将作为四边形角点的四个顶点以逆时针方向绘制出来。
+
+    ```c++
+    quad->addPrimitiveSet(new osg::DrawArrays(GL_QUADS, 0, 4));
+    ```
+
+7. 将几何对象添加到 `osg::Geode` 对象中并将它放入场景内进行渲染。
+
+    ```c++
+    osg::ref_ptr<osg::Geode> root = new osg::Geode;
+    root->addDrawable(quad.get());
+
+    osgViewer::Viewer viewer;
+    viewer.setSceneData(root.get());
+    return viewer.run();
+    ```
+
+8. 我们的程序最终将呈现一个颜色很漂亮的四边形，如图所示：
+
+    ![](../images/Chp4/Chp4-2.png)
+
+#### *到底发生了什么？*
+
+假设你熟悉以下OpenGL代码片段：
+
+```c
+static const GLfloat vertices[][3] = { /*...*/ };
+glEnableClientState(GL_VERTEX_ARRAY);
+glVertexPointer(4, GL_FLOAT, 0, vertices);
+glDrawArrays(GL_QUADS, 0, 4);
+```
 
