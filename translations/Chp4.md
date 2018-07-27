@@ -345,4 +345,67 @@ de->push_back(3); de->push_back(0); de->push_back(2);
     (*indices)[21] = 5; (*indices)[22] = 1; (*indices)[23] = 4;
     ```
 
-4. 为了是创建的几何对象拥有默认的白色，我们只设置顶点数组和 `osg::DrawElementdsUInt` 图元即可。法向量数组也是必需的，但是
+4. 为了是创建的几何对象拥有默认的白色，我们只设置顶点数组和 `osg::DrawElementdsUInt` 图元即可。法向量数组也是必需的，但是手动计算并不容易。我们将使用平滑法向计算器自动的获取顶点法向量。这个计算器将在下一章 *使用多边形技术* 有进一步描述。
+
+    ```c++
+    osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
+    geom->setVertexArray(vertices.get());
+    geom->addPrimitiveSet(indices.get());
+    osgUtil::SmoothingVisitor::smooth(*geom);
+    ```
+
+5. 将几何对象添加至一个 `osg::Geode` 对象中，并将此对象设置为场景根节点：
+
+    ```c++
+    osg::ref_ptr<osg::Geode> root = new osg::Geode;
+    root->addDrawable(geom.get());
+
+    osgViewer::Viewer viewer;
+    viewer.setSceneData(root.get());
+    return viewer.run();
+    ```
+
+6. 生成的八面体如下图所示：
+
+    ![](../images/Chp4/Chp4-5.png)
+
+#### *到底发生了什么?*
+
+**顶点数组 (vertex array)** 机制减少了OpenGL函数的调用次数。**客户端 (client side)** 将顶点数据存储在应用程序内存中，**服务端 (server side)** 的OpenGL管线可以访问不同的 **顶点数组 (vertex array)**。
+
+从下图中可以看出，OpenGL从客户端的顶点缓冲区中获取数据并以一种有序的方式组装图元。
+
+![](../images/Chp4/Chp4-6.png)
+
+这里的顶点缓冲用于管理通过 `osg::Geometry` 的 `set*Array()` 函数指定的数据。类 `osg::DrawArrays` 直接按这些数组的元素顺序获取数据并绘制它们。
+
+然而，类 `osg::DrawElements*` 提供了一个索引数组用以减少顶点传输的数量。索引数组允许在服务端的顶点缓存暂时存储数据，OpenGL将直接从缓存中获取数据而不是从客户端的顶点缓冲中。这种做法会极大的提程序升性能表现。
+
+### 小测验：优化基于索引的几何对象
+
+我们刚刚绘制的八面体仅由6个顶点组成。你能指出如果我们不使用索引的话实际会使用多少个顶点吗？
+
+大多数情况下，你会发现当绘制连续的三角网面片时三角形带会提供更好的性能表现。假设我们在上个例子中选择 `GL_TRIANGLE_STRIPS` 模式而不是 `GL_TRIANGLES` 模式，该如何构造索引数组？
+
+### 试一试：挑战立方体和棱锥
+
+现在，轮到你绘制一些其他多面体了，比如立方体或棱锥。立方体的结构我们在本节开始已经讨论过了。它包含6个顶点和12个三角形面，是使用顶点索引的良好范例。
+
+棱锥一般有一个多边形底面及若干有共同“顶端”的三角形侧面。以四棱锥为例：它包含了5个顶点和6个三角面（正方形底面包含了2个三角面）。每个顶点被3或4个三角面共用：
+
+![](../images/Chp4/Chp4-7.png)
+
+新建一个 `osg::Geometry` 对象并添加顶点和法向量数组。仍用 `osgUtil::SmoothingVisitor` 来计算平滑法向。创建一个 `osg::DrawElementsUint` 图元并指定 `GL_TRIANGLES` 绘制模式。对于更进一步的研究学习，你还可以尝试添加多个具有不同绘制模式的图元，例如，用 `GL_QUADS` 模式绘制棱锥底面，用 `GL_TRIANGLE_FAN` 模式绘制三角面。
+
+## 4.8 使用多边形技术
+
+OSG支持多种操作几何对象的多边形技术。这些预处理方法，如多边形简化和细分，通常用于创建和改进多边形模型，为稍后的渲染工程提供方便。它们被设计成简单的接口所以方便易用，但可能会在后台执行非常复杂的计算，所以不建议在即时演算过程中使用这些技术。
+
+下面列举了一些由OSG实现的多边形技术：
+
+1. `osgUtil::Simplifier`：它可简化几何对象中的三角面片数量。使用公共函数 `simplify()` 可简单地输入一个几何对象并对其进行处理。
+2. `osgUtil::SmoothingVisitor`：为任何包含图元的几何对象计算顶点法向量，例如前面我们见到的八面体。公共静态函数 `smooth()` 用于生成几何对象的平滑法向量，而无需人为重新分配和设置法向量数组。
+3. `osgUtil::TangentSpaceGenerator`：针对几何对象顶点生成包含切空间基向量的数组。通过函数 `generate()` 传入几何对象并通过函数 `getTangentArray()`、`getNormalArray()` 和 `getBinormalArray()` 获取结果。其结果可作为GLSL中的可变顶点属性。
+4. `OSGUtil::Tessellator`：它使用OpenGL实用工具(glu)中的曲面细分例程将复杂的图元分解为简单图元。通过函数 `retessellatePolygon()` 函数可将输入的几何对象图元修改为细分后的结果。
+5. `osg::TriStripVisitor`：它将几何对象的表面图元转换为三角面带，以获得更快的渲染效率和更高的内存利用率。公共函数 `stripify()` 用于将输入的几何对象的图元转换为 `GL_TRIANGLE_STRIP` 绘制模式。
+
