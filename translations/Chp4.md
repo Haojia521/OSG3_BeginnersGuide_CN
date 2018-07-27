@@ -1,4 +1,4 @@
-# chapter4：创建几何模型
+# 4 创建几何模型
 
 > OpenGL图形管线的基本运算是接收顶点数据（点、线、三角形和多边形）和像素数据（图形图像数据），将它们转换为 **片元 (fragments)** 并存储到 **帧缓存 (frame buffer)** 中。帧缓存在开发者与计算机显示之间充当主要接口，为读写操作将每一帧的图形内容映射到内存空间。OSG封装了OpenGL整个顶点转换和图元集操作，以便管理和发送顶点数据到OpenGL渲染管线，另外还包含了一些数据传输优化和额外的多边形技术来提高渲染性能。
 
@@ -69,43 +69,43 @@ OSG内定义的最常用的基本图形是：`osg::Box`、`osg::Capsule`、`osg:
 
 1. 包含必要的头文件：
 
-```c++
-#include <osg/ShapeDrawable>
-#include <osg/Geode>
-#include <osgViewer/Viewer>
-```
+    ```c++
+    #include <osg/ShapeDrawable>
+    #include <osg/Geode>
+    #include <osgViewer/Viewer>
+    ```
 
 2. 添加3个 `osg::ShapeDrawable` 对象，每个对象含有一个基本图形。我们将这些图形对象设置到不同位置以便于能同时在视景窗口中观察它们，为了更好的区分它们，我们利用 `osg::ShapeDrawable` 类的 `setColor()` 函数将后两个图形一个染成绿色另一个染成蓝色。
 
-```c++
-osg::ref_ptr<osg::ShapeDrawable> shape1 = new osg::ShapeDrawable;
-shape1->setShape(new osg::Box(osg::Vec3(-3.0f, 0.0f, 0.0f), 2.0f, 2.0f, 1.0f));
+    ```c++
+    osg::ref_ptr<osg::ShapeDrawable> shape1 = new osg::ShapeDrawable;
+    shape1->setShape(new osg::Box(osg::Vec3(-3.0f, 0.0f, 0.0f), 2.0f, 2.0f, 1.0f));
 
-osg::ref_ptr<osg::ShapeDrawable> shape2 = new osg::ShapeDrawable;
-shape2->setShape(new osg::Sphere(osg::Vec3(3.0f, 0.0f, 0.0f), 1.0f));
-shape2->setColor(osg::Vec4(0.0f, 0.0f, 1.0f, 1.0f));
+    osg::ref_ptr<osg::ShapeDrawable> shape2 = new osg::ShapeDrawable;
+    shape2->setShape(new osg::Sphere(osg::Vec3(3.0f, 0.0f, 0.0f), 1.0f));
+    shape2->setColor(osg::Vec4(0.0f, 0.0f, 1.0f, 1.0f));
 
-osg::ref_ptr<osg::ShapeDrawable> shape3 = new osg::ShapeDrawable;
-shape3->setShape(new osg::Cone(osg::Vec3(0.0f, 0.0f, 0.0f), 1.0f, 1.0f));
-shape3->setColor(osg::Vec4(0.0f, 1.0f, 0.0f, 1.0f));
-```
+    osg::ref_ptr<osg::ShapeDrawable> shape3 = new osg::ShapeDrawable;
+    shape3->setShape(new osg::Cone(osg::Vec3(0.0f, 0.0f, 0.0f), 1.0f, 1.0f));
+    shape3->setColor(osg::Vec4(0.0f, 1.0f, 0.0f, 1.0f));
+    ```
 
 3. 创建一个 `osg::Geode` 对象并将所有可绘制对象添加进去。注意这里所有的可绘制对象和几何节点均是由智能指针 `osg::ref_ptr<>` 管理。最后， `osg::Geode` 对象作为视景器的场景根节点进行显示。
 
-```c++
-osg::ref_ptr<osg::Geode> root = new osg::Geode;
-root->addChild(shape1.get());
-root->addChild(shape2.get());
-root->addChild(shape3.get());
+    ```c++
+    osg::ref_ptr<osg::Geode> root = new osg::Geode;
+    root->addChild(shape1.get());
+    root->addChild(shape2.get());
+    root->addChild(shape3.get());
 
-osgViewer::Viewer viewer;
-viewer.setSceneData(root.get());
-return viewer.run();
-```
+    osgViewer::Viewer viewer;
+    viewer.setSceneData(root.get());
+    return viewer.run();
+    ```
 
 4. 现在是时候检查一下图形是否被正确绘制了。我们无需关心实际与顶点坐标、法向量和颜色相关的处理工作，这给程序调试带来便利并能快速预览图形。
 
-![](../images/Chp4/Chp4-1.png)
+    ![](../images/Chp4/Chp4-1.png)
 
 #### *到底发生了什么？*
 
@@ -276,3 +276,73 @@ glVertexPointer(4, GL_FLOAT, 0, vertices);
 glDrawArrays(GL_QUADS, 0, 4);
 ```
 
+数组变量 `vertices` 用来定义被渲染的顶点坐标。OpenGL函数 `glDrawArrays()` 使用数组中的连续4个元素按 `GL_QUADS` 模式绘制几何图元，即三维空间中的四边形。
+
+类 `osg::Geometry` 主要通过 `setVertexArray()` 和 `addPrimitiveSet()` 函数将上述整个过程封装了起来。实际上，顶点数据和图元的相关设置并不会在用户程序调用这些函数时立即执行，而是在下次场景遍历绘制过程到达此几何对象时才会生效。这使得在不需强制场景来回渲染的情况下能够使用 `osg::Geometry` 的大多数函数进行属性的读取和修改。
+
+### 小测试：尝试不同图元类型
+
+在前面的例子中，我们为图元定义了 *`mode`*、*`start`* 和 *`count`* 三个参数并得到了一个四边形。而对你重要的一点是要理解几何对象顶点是如何被一个或多个图元解译的。你能在一个表格中列举出那10中模式对应的符号（`GL_TRIANGLES`、`GL_QUADS` 等等）以及它们的主要行为吗？例如，某个模式如何对待顶点和索引，最终会绘制什么图形？
+
+## 4.7 基于索引的图元
+
+当直接从数组汇总读取连续的顶点数据（读取过程不会忽略任何顶点）时，`osg::DrawArrays` 类能够胜任相关绘制工作。然而，如果有许多共享顶点时它就变得不太高效了。例如，通过 `osg::DrawArrays` 使用8个顶点在 `GL_TRIANGLES` 模式下绘制一个立方体，每个顶点都会在顶点数组内重复好几次，数组大小会至少增加到36（12个三角面片）：
+
+![](../images/Chp4/Chp4-3.png)
+
+类 `osg::DrawElementsUInt`以及 `osg::DrawElementsUByte`、`osg::DrawElementUShort` 以索引数组的形式解决上述问题。它们均继承自 `osg::PrimitiveSet` 并且封装了OpenGL的 `glDrawElements()` 函数，仅数据类型不同。索引数组保存顶点数组元素的索引值。在此例中，使用相关基于索引的图元后，几何对象立方体的顶点数组大小就可保持为8了。
+
+类 `osg::DrawElements*` 与 `std::vector` 有类似的使用方式。例如，可按如下代码这样向一个新创建的 `osg::DrawElementsUInt` 对象添加索引：
+
+```c++
+osg::ref_ptr<osg::DrawElementsUInt> de = new sog::DrawElementsUInt(GL_TRIANGLES);
+de->push_back(0); de->push_back(1); de->push_back(2);
+de->push_back(3); de->push_back(0); de->push_back(2);
+```
+
+这段代码定义了上一张图片中立方体的前表面。
+
+### 动手实践：绘制一个八面体
+
+八面体是由8个三角面组成的多面体，它是一个向我们展示图元索引是多么的重要的极佳例子。我们先描绘出八面体的结构，如下图所示：
+
+![](../images/Chp4/Chp4-4.png)
+
+八面体有6个顶点，每个顶点被4个三角面共用。当使用 `osg::DrawArrays` 时我们不得不创建一个具有24个元素的顶点数组来绘制这8个三角面。然而，在类 `osg::DrawElementsUInt` 和索引数组的帮助下，我们只需创建仅有6个元素的顶点数组，而这样显著提高了几何绘制的效率。
+
+1. 包含必要头文件
+
+    ```c++
+    #include <osg/Geometry>
+    #include <osg/Geode>
+    #include <osgUtil/SmoothingVisitor>
+    #include <osgViewer/Viewer>
+    ```
+
+2. 正如前面讨论的那样，类 `osg::Vec3Array` 继承了 `std::vector` 的特征，所以可以通过一个预定义的尺寸参数构造特定大小的实例，然后直接使用 `[]` 操作符对其进行修改。
+
+    ```c++
+    osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array(6);
+    (*vertices)[0].set( 0.0f, 0.0f, 1.0f);
+    (*vertices)[1].set(-0.5f,-0.5f, 0.0f);
+    (*vertices)[2].set( 0.5f,-0.5f, 0.0f);
+    (*vertices)[3].set( 0.5f, 0.5f, 0.0f);
+    (*vertices)[4].set(-0.5f, 0.5f, 0.0f);
+    (*vertices)[5].set( 0.0f, 0.0f,-1.0f);
+    ```
+
+3. 类 `osg::DrawElementsUInt` 除了绘制模式参数还需要一个数字作为参数来定义其大小。然后，我们指定顶点索引来描述这八个三角形面。
+
+    ```c++
+    osg::ref_ptr<osg::DrawElementsUInt> indices = new osg::DrawElementsUInt(GL_TRIANGLES, 24);
+    (*indices)[0]  = 0; (*indices)[1]  = 1; (*indices)[2]  = 2;
+    (*indices)[3]  = 0; (*indices)[4]  = 2; (*indices)[5]  = 3;
+    (*indices)[6]  = 0; (*indices)[7]  = 3; (*indices)[8]  = 4;
+    (*indices)[9]  = 0; (*indices)[10] = 4; (*indices)[11] = 1;
+    (*indices)[12] = 5; (*indices)[13] = 2; (*indices)[14] = 1;
+    (*indices)[15] = 5; (*indices)[16] = 3; (*indices)[17] = 2;
+    (*indices)[18] = 5; (*indices)[19] = 4; (*indices)[20] = 3;
+    (*indices)[21] = 5; (*indices)[22] = 1; (*indices)[23] = 4;
+    ```
+
+4. 为了是创建的几何对象拥有默认的白色，我们只设置顶点数组和 `osg::DrawElementdsUInt` 图元即可。法向量数组也是必需的，但是
