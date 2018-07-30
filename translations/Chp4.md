@@ -1,13 +1,13 @@
 # 4 创建几何模型
 
-> OpenGL图形管线的基本运算是接收顶点数据（点、线、三角形和多边形）和像素数据（图形图像数据），将它们转换为 **片元 (fragments)** 并存储到 **帧缓存 (frame buffer)** 中。帧缓存在开发者与计算机显示之间充当主要接口，为读写操作将每一帧的图形内容映射到内存空间。OSG封装了OpenGL整个顶点转换和图元集操作，以便管理和发送顶点数据到OpenGL渲染管线，另外还包含了一些数据传输优化和额外的多边形技术来提高渲染性能。
+> OpenGL图形管线的基本运算是接收顶点数据（点、线、三角形和多边形）和像素数据（图形图像数据），将它们转换为 **片元 (fragments)** 并存储到 **帧缓存 (frame buffer)** 中。帧缓存在开发者与计算机显示之间充当主要接口，为读写操作将每一帧的图形内容映射到内存空间。OSG封装了OpenGL整个顶点转换和图元集操作，以便管理和发送顶点数据到OpenGL渲染管线，另外还包含了一些数据传输优化和额外的多边形处理技术来提高渲染性能。
 
 在本章，我们集中学习如何快速的绘制和渲染几何模型，接下来将涉及以下内容：
 
 * 如何使用几个必要的参数快速地绘制基本图形对象
 * 如何设置顶点和顶点属性数组来构建几何对象
 * 按图元索引顶点数据的原因和方法
-* 如何使用不同的多边形技术优化渲染过程
+* 如何使用不同的多边形处理技术优化渲染过程
 * 如何获取几何属性和图元
 * 集成OpenGL绘制调用到你的OSG应用程序
 
@@ -345,7 +345,7 @@ de->push_back(3); de->push_back(0); de->push_back(2);
     (*indices)[21] = 5; (*indices)[22] = 1; (*indices)[23] = 4;
     ```
 
-4. 为了是创建的几何对象拥有默认的白色，我们只设置顶点数组和 `osg::DrawElementdsUInt` 图元即可。法向量数组也是必需的，但是手动计算并不容易。我们将使用平滑法向计算器自动的获取顶点法向量。这个计算器将在下一章 *使用多边形技术* 有进一步描述。
+4. 为了是创建的几何对象拥有默认的白色，我们只设置顶点数组和 `osg::DrawElementdsUInt` 图元即可。法向量数组也是必需的，但是手动计算并不容易。我们将使用平滑法向计算器自动的获取顶点法向量。这个计算器将在下一章 *使用多边形处理技术* 有进一步描述。
 
     ```c++
     osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
@@ -397,11 +397,11 @@ de->push_back(3); de->push_back(0); de->push_back(2);
 
 新建一个 `osg::Geometry` 对象并添加顶点和法向量数组。仍用 `osgUtil::SmoothingVisitor` 来计算平滑法向。创建一个 `osg::DrawElementsUint` 图元并指定 `GL_TRIANGLES` 绘制模式。对于更进一步的研究学习，你还可以尝试添加多个具有不同绘制模式的图元，例如，用 `GL_QUADS` 模式绘制棱锥底面，用 `GL_TRIANGLE_FAN` 模式绘制三角面。
 
-## 4.8 使用多边形技术
+## 4.8 使用多边形处理技术
 
-OSG支持多种操作几何对象的多边形技术。这些预处理方法，如多边形简化和细分，通常用于创建和改进多边形模型，为稍后的渲染工程提供方便。它们被设计成简单的接口所以方便易用，但可能会在后台执行非常复杂的计算，所以不建议在即时演算过程中使用这些技术。
+OSG支持多种操作几何对象的多边形处理技术。这些预处理方法，如多边形简化和细分，通常用于创建和改进多边形模型，为稍后的渲染工程提供方便。它们被设计成简单的接口所以方便易用，但可能会在后台执行非常复杂的计算，所以不建议在即时演算过程中使用这些技术。
 
-下面列举了一些由OSG实现的多边形技术：
+下面列举了一些由OSG实现的多边形处理技术：
 
 1. `osgUtil::Simplifier`：它可简化几何对象中的三角面片数量。使用公共函数 `simplify()` 可简单地输入一个几何对象并对其进行处理。
 2. `osgUtil::SmoothingVisitor`：为任何包含图元的几何对象计算顶点法向量，例如前面我们见到的八面体。公共静态函数 `smooth()` 用于生成几何对象的平滑法向量，而无需人为重新分配和设置法向量数组。
@@ -497,7 +497,35 @@ node->accept(tsv);
 
 ![](../images/Chp4/Chp4-10.png)
 
-与OpenGL细化例程一样，类 `osgUtil::Tessellator` 也能处理带有孔洞和自相交的多边形。它的公共函数 `setWindingType()` 可以设置不同的环绕规则，例如 `GLU_WINDING_ODD` 和`GLU_TESS_WINDING_NONZERO`。环绕规则可判定复杂多边形的内部和外部区域。
+与OpenGL细化例程一样，类 `osgUtil::Tessellator` 也能处理带有孔洞和自相交的多边形。它的公共函数 `setWindingType()` 可以设置不同的环绕规则，例如 `GLU_WINDING_ODD` 和`GLU_TESS_WINDING_NONZERO`，这些规则用于判定复杂多边形的内部和外部区域。
 
-## 4.9 再探几何对象属性
+## 4.9 重读几何对象属性
+
+类 `osg::Geometry` 通过 **顶点数组 (vertex array)** 管理大量的顶点数据，并使用有序的图元渲染顶点及其属性数据。然而，`osg::Geometry` 对象没有任何拓扑元素，例如面、边以及它们之间的关系。这导致了很难在几何对象基础上实现复杂的多边形处理算法以及自由方便地编辑几何对象（通过拖动某个边或面来操纵模型等操作）。
+
+OSG目前不支持拓扑算法相关功能，也许因为对于渲染API来讲实现这些算法看起来有些奇怪。不过OSG实现了一系列仿函数(functor)从任意 **可绘制对象 (drawable)** 中重读几何属性和图元数据，可利用它们来进行拓扑网格建模等操作。
+
+**仿函数 (functor)** 是指可以像函数那样被调用以执行一些功能的类。**仿函数 (functor)** 可以通过相同的返回类型和调用参数来模仿一些已知接口，但是将以自定义的方式捕获和处理所有传递给 **仿函数 (functor)** 的参数。
+
+类 `osg::Drawables` 可接受4中仿函数：
+
+1. `osg::Drawable::AttributeFunctor` 以数组指针的方式读取顶点属性。它有一些虚函数可应用于不同数据类型的顶点属性。要使用这种仿函数，需继承此类并重写一个或多个虚函数类实现你需要的功能：
+
+    ```c++
+    virtual void apply(osg::Drawable::AttributeType type, unsigned int size, osg::Vec3 *ptr)
+    {
+        // Read 3-elements vectors with the ptr and size parameters.
+        // The first parameter determines the attribute type,
+        // for example, osg::Drawable::VERTICES.
+        // ...
+    }
+    ```
+
+2. `osg::Drawable::ConstAttributeFunctor` 是 `osg::Drawable::AttributeFunctor` 的只读版本。它们的唯一区别是前者的 `apply()` 函数以数组常量指针作为参数。
+
+3. `osg::PrimitiveFunctor` 模仿OpenGL的绘制例程，例如 `glDrawArrays()`，`glDrawElements()` 和即时渲染模式。使用它时可以认为在“渲染”可绘制对象，只是此处的“渲染”是在调用仿函数的方法。`osg::PrimitiveFunctor` 有两个可实际使用的重要子模板类：`osg::TemplatePrimitiveFunctor<>` 和 `osg::TriangleFunctor<>`。这两个类获取每个图元最终要“绘制”的顶点并将它们传递给用户自定义的 `operator()` 函数进行处理。
+
+4. `osg::PrimitiveIndexFunctor` 同样模仿OpenGL的绘制例程。它的子类，`osg::TriangleIndexFunctor<>`，会获取并使用每个图元的顶点索引。
+
+`osg::Drawable` 的子类，如 `osg::ShapeDrawable` 和 `osg::Geometry`，可通过 `accept()` 函数接受其它不同类型的仿函数。
 
