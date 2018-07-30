@@ -107,7 +107,7 @@ OSG内定义的最常用的基本图形是：`osg::Box`、`osg::Capsule`、`osg:
 
     ![](../images/Chp4/Chp4-1.png)
 
-#### *到底发生了什么？*
+#### *总结与探究*
 
 在需要快速显示图形时 `osg::ShapeDrawable` 类非常有用，但这并不是高效的 **几何图元 (geometry primitives)** 绘制方式。当你开发3D应用过程中，它应该仅在原型设计或调试时使用。如要创建能满足高效计算和可视化性能的几何图形，接下来即将介绍的 `osg::Geometry` 类永远是更好的选择。
 
@@ -265,7 +265,7 @@ geom->addPrimitiveSet(new osg::DrawArrays(mode, first, count);
 
     ![](../images/Chp4/Chp4-2.png)
 
-#### *到底发生了什么？*
+#### *总结与探究*
 
 假设你熟悉以下OpenGL代码片段：
 
@@ -369,7 +369,7 @@ de->push_back(3); de->push_back(0); de->push_back(2);
 
     ![](../images/Chp4/Chp4-5.png)
 
-#### *到底发生了什么?*
+#### *总结与探究*
 
 **顶点数组 (vertex array)** 机制减少了OpenGL函数的调用次数。**客户端 (client side)** 将顶点数据存储在应用程序内存中，**服务端 (server side)** 的OpenGL管线可以访问不同的 **顶点数组 (vertex array)**。
 
@@ -407,5 +407,97 @@ OSG支持多种操作几何对象的多边形技术。这些预处理方法，�
 2. `osgUtil::SmoothingVisitor`：为任何包含图元的几何对象计算顶点法向量，例如前面我们见到的八面体。公共静态函数 `smooth()` 用于生成几何对象的平滑法向量，而无需人为重新分配和设置法向量数组。
 3. `osgUtil::TangentSpaceGenerator`：针对几何对象顶点生成包含切空间基向量的数组。通过函数 `generate()` 传入几何对象并通过函数 `getTangentArray()`、`getNormalArray()` 和 `getBinormalArray()` 获取结果。其结果可作为GLSL中的可变顶点属性。
 4. `OSGUtil::Tessellator`：它使用OpenGL实用工具(glu)中的曲面细分例程将复杂的图元分解为简单图元。通过函数 `retessellatePolygon()` 函数可将输入的几何对象图元修改为细分后的结果。
-5. `osg::TriStripVisitor`：它将几何对象的表面图元转换为三角面带，以获得更快的渲染效率和更高的内存利用率。公共函数 `stripify()` 用于将输入的几何对象的图元转换为 `GL_TRIANGLE_STRIP` 绘制模式。
+5. `osg::TriStripVisitor`：它将几何对象的表面图元转换为三角面带，以获得更快的渲染效率和更高的内存利用率。公共函数 `stripify()` 用于将输入的几何对象的图元绘制模式转换为 `GL_TRIANGLE_STRIP`。
+
+上述介绍的函数均是以 `osg::Geometry&` 引用作为参数的：
+
+```c++
+osgUtil::TriStripVisitor tsv;
+tsv.stripify(*geom);
+```
+
+这里的变量 `geom` 是由 **智能指针 (smart pointer)** 管理的 `osg::geomtry` 对象。
+
+类 `osgUtil::Simplifier`，`osgUtil::SmoothingVisitor` 和 `osgUtil::TriStripVisitor` 也可通过场景图节点调用，例如：
+
+```c++
+osgUtil::TriStripifyVisitor tsv;
+node->accept(tsv);
+```
+
+变量 `node` 代表一个 `osg::Node` 对象。函数 `accept()` 会遍历节点的孩子节点直至到达 **叶子节点 (leaf node)**，找出所有保存在 `osg::Geode` 内的几何对象并对其进行处理。
+
+### 动手实践：细分多边形面
+
+直接通过OpenGL API不能正确绘制复杂图元数据，包括凹多边形、自相交多边形和有孔洞的多边形。只有将非凸多边形分解为凸多边形后，数据才能被OpenGL管线正确渲染出来。类 `osgUtil::Tessellator` 就是用来做多边形细分工作的。
+
+1. 包含必要头文件：
+
+    ```c++
+    #include <osg/Geometry>
+    #inclide <osg/Geode>
+    #include <osgUtil/Tesslator>
+    #include <osgViewer/Viewer>
+    ```
+
+2. 使用 `osg::Geometry` 创建一个凹多边形。简单来讲，只要一个多边形存在大于180度的内角，那么它就是凹多边形。这里，作为示例的几何对象是右手边有一个凹陷的四边形，使用 `GL_POLYGON` 图元模式绘制。
+
+    ```c++
+    osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array;
+    vertices->push_back(osg::Vec3(0.0f, 0.0f, 0.0f));
+    vertices->push_back(osg::Vec3(2.0f, 0.0f, 0.0f));
+    vertices->push_back(osg::Vec3(2.0f, 0.0f, 1.0f));
+    vertices->push_back(osg::Vec3(1.0f, 0.0f, 1.0f));
+    vertices->push_back(osg::Vec3(1.0f, 0.0f, 2.0f));
+    vertices->push_back(osg::Vec3(2.0f, 0.0f, 2.0f));
+    vertices->push_back(osg::Vec3(2.0f, 0.0f, 3.0f));
+    vertices->push_back(osg::Vec3(0.0f, 0.0f, 3.0f));
+
+    osg::ref_ptr<osg::Vec3Array> normals = new osg::Vec3Array;
+    normals->push_back(osg::Vec3(0.0f, -1.0f, 0.0f));
+
+    osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
+    geom->setVertexArray(vertices.get());
+    geom->setNormalArray(mormals.get());
+    geom->setNormalBinding(osg::Goemetry::BIND_OVERALL);
+    geom->addPrimitiveSet(new osg::Drawarrays(GL_POLYGON, 0, 8));
+    ```
+
+3. 如果直接将变量 `geom` 添加到 `osg::Geode` 对象中并使用 `osgViewer::Viewer` 显示，我们将得到一个错误的绘制结果，图下图所示：
+
+    ![](../images/Chp4/Chp4-8.png)
+
+4. 想要正确绘制这个凹多边形，我们必须使用 `osgUtil::Tesselltor` 对多边形进行细分。
+
+    ```c++
+    osgUtil::Tessellator tessellator;
+    tessellator.retessellatePolygons(*geom);
+    ```
+
+5. 现在 `geom` 已经被修改了，再次将它添加到几何节点中然后通过场景视景器查看：
+
+    ```c++
+    osg::ref_ptr<osg::Geode> root = new osg::Geode;
+    root->addDrawble(geom.get());
+
+    osgViewer::Viewer viewer;
+    viewer.setSceneData(root.get());
+    return viewer.run();
+    ```
+
+6. 这次我们得到了正确的结果：
+
+    ![](../images/Chp4/Chp4-9.png)
+
+#### *总结与探究*
+
+没有被细分的凹多边形在大多数情况下都不会按我们预期的那样进行绘制。为了优化性能，OpenGL会将它们按简单多边形对待或是直接忽略，而这将会产生意想不到的结果。
+
+类 `osgUtil::Tessellaotr` 使用OpenGL细分例程对存储在 `osg::Geometry` 中的凹多边形进行处理。在细分过程中它会自行选择绘制效率最高的图元类型。比如在上面的例子中，将使用 `GL_TRIANGLE_STRIP` 图元绘制模式并三角化原多边形，即将它分割成一些三角形。
+
+![](../images/Chp4/Chp4-10.png)
+
+与OpenGL细化例程一样，类 `osgUtil::Tessellator` 也能处理带有孔洞和自相交的多边形。它的公共函数 `setWindingType()` 可以设置不同的环绕规则，例如 `GLU_WINDING_ODD` 和`GLU_TESS_WINDING_NONZERO`。环绕规则可判定复杂多边形的内部和外部区域。
+
+## 4.9 再探几何对象属性
 
