@@ -82,3 +82,33 @@ OSG的整体架构如下图所示：
 
 大多数情况下，**osg**、**osgDB**、**osgUtil** 和 **osgViewer** 是基于OSG的应用的主要组件，在本书之后的章节将会讨论这些库的更多细节，其他不经常使用的 **节点组件** 可能会在特定章节内提到。
 
+## 1.5 为什么用OSG
+
+OSG项目是开源的，并在一个修改后的GNU通用公共许可证(LGPL)下发布，即OSGPL。它给用户带来了显著的好处：
+
++ **严谨的结构**：OSG充分使用了标准模板库(STL)即多种设计模式。它还利用开放源码开发模型，以提供一个无法律的、以用户为中心的应用程序编程接口。
++ **性能优越**：一系列的场景图技术已经在OSG中得到了很好的实现，包括视锥体和遮挡裁剪，多层次细节(LOD)配置，渲染状态排序，粒子和阴影技术，并且完整封装了OpenGL扩展和着色语言。
++ **高可扩展性**：OSG的核心功能结构明晰且是高度可扩展的。这使得用户很容易编写自定义的节点组件和文件读写插件，并将它们集成到场景图和应用程序中。
++ **软硬件层面的高可移植性**：OSG核心部分对任何特定的平台或窗口系统的依赖程度最低，只需要标准的C++和OpenGL。这使基于OSG的程序移植到Windows、Linux、Mac OSX、FreBSD、Solaris甚至嵌入式平台提供了极大的便利。
++ **跟进最新进展**：有了活跃的开发者社区，OSG的发展速度非常快。它支持最新的OpenGL和OpenGL ES扩展和各种图形概念和技术，并在开发迭代周期中获得了大量的反馈。
++ **开源**：在现代工业中，开源意味着协同智能(co-intelligence)、高质量和灵活性，而不仅仅是廉价。在自己的应用程序中使用OSG时，用户和公司也不必担心软件专利侵权。
+
+## 1.6 谁在用OSG
+
+下面粗略列举了一些使用OSG或将OSG作为其应用程序和产品开发工具的组织：
+
+| Organization name | Download link(if downloadable) | Purpose using OSG |
+| --- | --- | --- |
+| Boeing | - | Flight simulation |
+| Delta 3D | [www.delta3d.org](http://www.delta3d.org) | Game engine |
+| Flight Gear | [www.flightgear.org](http://www.flightgear.org) | Flight simulation |
+| Intra | - | Train simulation |
+| Magic Earth | - | Oil and gas probing |
+| NASA | - | Earth simulation |
+| Norcontrol | - | Maritime simulation |
+| ossimPlanet | [www.ossim.org](http://www.ossim.org/OSSIM/ossimPlanet.html) | Geo-spatial visualization |
+| Virtual Terrain Project | [www.vterrain.org](http://www.vterrain.org) | CAD and GIS related fields |
+| VR Juggler | [www.vrjuggler.org](http://www.vrjuggler.org) | Virtual reality system |
+
+其他客户包括ESA、Landmark Graphics、Sony、STN Atlas、Northrop Grumman，甚至还有军事部门。要了解更多的基于OSG的项目和成果，只需搜索整个web，并通过web社区与世界各地的开发人员保持联系。
+
