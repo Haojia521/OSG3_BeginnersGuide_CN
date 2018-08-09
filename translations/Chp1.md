@@ -112,3 +112,68 @@ OSG项目是开源的，并在一个修改后的GNU通用公共许可证(LGPL)�
 
 其他客户包括ESA、Landmark Graphics、Sony、STN Atlas、Northrop Grumman，甚至还有军事部门。要了解更多的基于OSG的项目和成果，只需搜索整个web，并通过web社区与世界各地的开发人员保持联系。
 
+## 1.7 快速体验
+
+在坐下来进行编码之前，你应该已经建立了一个OSG开发环境，其中包括 **头文件** 和 **库**，可通过获得与编译器版本兼容的预构建软件包，或者使用源代码构建所有内容。详情请参阅第2章OpenSceneGraph的编译和安装。
+
+### 动手实践：编写OSG样式的"Hello World"程序
+
+迫不及待地想体验一下OSG编程？这里有一个简单至极的例子，展示了如何加载一个现有的模型文件并将其呈现在屏幕上。这可比在控制台窗口打印出"Hello Wolrd"文本有趣多了：
+
+1. 使用任何代码编辑器创建工程：
+
+    ```c++
+    #include <osgDB/ReadFile>
+    #include <osgViewer/Viewer>
+    int main(int argc, char **argv>
+    {
+        osgViewer::Viewer viewer;
+        viewer.setSceneData(osgDB::readNodeFile("cessna.osg"));
+        return viewer.run();
+    }
+    ```
+
+2. 指定OSG **头文件** 位置和 **依赖库**。你需要告诉链接器将你的工程与以下5个库进行链接：**OpenThreads**、**osg**、**osgDB**、**osgUtil** 和 **osgViewer**。你将在下一章学习更多有关配置OSG应用程序的知识。
+3. 构建你的工程。确保cessna.osg文件已经存在于可执行文件相同目录下或在环境变量 **OSG_FILE_PATH** 指定的文件夹中。
+4. 快来看！你得到了一个全屏显示的窗口并在中间有一个飞行器：
+
+    ![](../images/Chp1/Chp1-2.png)
+
+5. 试着用你的鼠标对你所观察到的东西做出一些改变。当你移动鼠标时，按下并按住鼠标左键、中键和右键来旋转、移动和缩放cessna。注意你实际上并不是在修改模型，而是改变了虚拟视点。
+
+#### 总结与探究
+
+刚刚创建的这个简单易读的示例展示了OSG是多么的强大和简洁。函数 `osgDB::readNodeFile()` 用来读取一个已有的 **节点文件**，即呈现Cessna模型的 **场景图**。然后创建的 `osgViewer::Viewer` 实例用来设置场景数据，并为应用程序提供一个仿真循环以渲染数据。
+
+这里 *osg* 和 *osgDB* 是命名空间，*Viewer* 是类名。函数和类成员的命名均采用“驼峰式”风格，即第一个单词的首字母为小写，随后的单词首字母为大写。
+
+## 1.8 加入社区
+
+欢迎所有对学习和使用OSG有兴趣的人在任何时候加入社区。有几种方法可以与核心开发团队和数千名OSG开发者取得联系。
+
+公共邮件列表，最为推荐的方式。这里的一个邮件列表是一个订阅者列表，他们通过电子邮件讨论同一个特定的主题。通过以下链接订阅OSG邮件列表：
+
+| Mailing list | Subscription link | Description |
+| --- | -- | --- |
+| osg-users | [http://lists.openscenegraph.org/listinfo.cgi/osg-usersopenscenegraph.org](http://lists.openscenegraph.org/listinfo.cgi/osg-usersopenscenegraph.org) | General technique support and discussions |
+| osg-submissions | [http://lists.openscenegraph.org/listinfo.cgi/osgsubmissions-openscenegraph.org](http://lists.openscenegraph.org/listinfo.cgi/osgsubmissions-openscenegraph.org) | Submission of code changes and bug fixes only |
+
+论坛，实质上已经与邮件列表联系在一起，提供给喜欢论坛这种形式的人：[http://forum.openscenegraph.org](http://forum.openscenegraph.org)。
+
+你也可以在网络上找到各式各样的OSG讨论组，比如在IRC channel、Google group、LinkedIn，甚至还有中国的镜像站。
+
++ irc.freenode.net #openscenegraph
++ http://groups.google.com/group/osg-users/topics
++ http://www.linkedin.com/e/gis/61724/6F710C14EBAF
++ http://bbs.osgchina.org/
+
+公司和个人也可以通过支付适当的费用来寻求专业服务。这里列出了一些专业的OSG承包商，作为参考：
+http://www.openscenegraph.org/projects/osg/wiki/Community/Contractors。
+
+最后，请记住随时访问维基网站和开发者博客。这包含了大量的信息，包括最新的新闻和OSG发行版的下载链接：
+
++ http://www.openscenegraph.org/
++ http://blog.openscenegraph.org/
+
+## 总结
+
