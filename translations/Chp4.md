@@ -529,3 +529,98 @@ OSG目前不支持拓扑算法相关功能，也许因为对于渲染API来讲�
 
 `osg::Drawable` 的子类，如 `osg::ShapeDrawable` 和 `osg::Geometry`，可通过 `accept()` 函数接受其它不同类型的仿函数。
 
+## 4.10 自定义图元仿函数
+
+上一节提到了 **仿函数 (functor)**，不过仅使用上节的信息来设想它的应用场景就抽象了。本节我们以提取模型三角面集为例子展示 **仿函数 (functor)** 的使用方法。虽然我们使用顶点数组和图元集管理 `osg::Geometry` 的渲染数据，不过某些情况下我们仍然想收集模型的所有三角面以及每个面的顶点。我们可以通过使用一个收集器来获取几何顶点、边和面的关联信息并构建几何数据结构。
+
+### 动手实践：提取三角面
+
+**仿函数 (functor)** 类 `osg::TriangleFunctor<>` 专门用于收集三角面信息。如果可能的话，它会将 `osg::Drawable` 对象的图元集转换为一系列三角形。它的模板参数类型必须实现一个`operator()` 操作符函数并且此函数包含三个 `const osg::Vec3&` 参数和一个 `bool` 参数，当应用这个 **仿函数 (functor)** 时每处理一个三角面都会调用这个函数。
+
+1. 我们定义一个作为模板参数的结构体，`operator()` 函数的前三个参数代表三角面的三个顶点，最后一个参数指示这些顶点是否来自临时顶点数组。
+
+    ```c++
+    struct FaceCollector
+    {
+        void operator() (const osg::Vec3& v1, const osg::Vec3& v2,
+                         const osg::Vec3& v3, bool)
+        {
+            std::cout << "Face vertices: " << v1 << "; " << v2 << << "; "
+                      << v3 << std::endl;
+        }
+    };
+    ```
+
+2. 我们将使用 `GL_QUAD_STRIP` 创建一个类似墙壁的对象，这意味着几何形状最初不是由三角形构成的。这个对象包含10个顶点和4个四边形面。
+
+    ```c++
+    osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array;
+    vertices->push_back(osg::Vec3(0.0f, 0.0f, 0.0f));
+    vertices->push_back(osg::Vec3(0.0f, 0.0f, 1.0f));
+    vertices->push_back(osg::Vec3(1.0f, 0.0f, 0.0f));
+    vertices->push_back(osg::Vec3(1.0f, 0.0f, 1.5f));
+    vertices->push_back(osg::Vec3(2.0f, 0.0f, 0.0f));
+    vertices->push_back(osg::Vec3(2.0f, 0.0f, 1.0f));
+    vertices->push_back(osg::Vec3(3.0f, 0.0f, 0.0f));
+    vertices->push_back(osg::Vec3(3.0f, 0.0f, 1.5f));
+    vertices->push_back(osg::Vec3(4.0f, 0.0f, 0.0f));
+    vertices->push_back(osg::Vec3(4.0f, 0.0f, 1.0f));
+
+    osg::ref_ptr<osg::Vec3Array> normals = new osg::Vec3Array;
+    normals->push_back(osg::Vec3(0.0f, -1.0f, 0.0f));
+
+    osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
+    geom->setVertexArray(vertices.get());
+    geom->setNormalArray(normals.get(), osg::Array::BIND_OVERALL);
+    geom->addPrimitiveSet(new osg::DrawArrays(GL_QUAD_STRIP, 0, 10));
+    ```
+
+3. 使用 `osgViewer::Viewer` 并以一个 `osg::Geode` 对象为场景根节点来显示创建的几何对象。它与先前提到的几何对象相比看起来并没有什么特别。
+
+    ```c++
+    osg::ref_ptr<osg::Geode> root = new osg::Geode;
+    root->addDrawable(geom.get());
+
+    osgViewer::Viewer viewer;
+    viewer.setSceneData(root.get());
+    viewer.run();
+    ```
+
+    屏幕截图如下：
+
+    ![](../images/Chp4/Chp4-11.png)
+
+4. 现在我们将自定义的结构体 `FaceCollector` 作为模板参数添加至 `osg::TriangleFunctor<>` 中，并将仿函数对象应用到 `osg::Geometry` 对象上。
+
+    ```c++
+    osg::TriangleFunctor<FaceCollector> functor;
+    geom->apply(functor);
+    ```
+
+5. 在控制台中启动程序，命令行提示符窗口中将打印出面片的顶点列表。
+
+    ![](../images/Chp4/Chp4-12.png)
+
+#### *总结与探究*
+
+**仿函数** 只是简单地模仿 `osg::Geometry` 的 `accept()` 函数实现中的OpenGL调用。它使用 `setVertexArray()` 和 `drawArrays()` 函数读取顶点数据和图元集，这些函数具有与OpenGL的 `glVertexPointer()` 和 `glDrawArrays()` 函数相同的输入参数。但是，`drawArrays()` 函数实际上并不在3D世界中绘制对象。它将调用模板类或结构的成员函数，我们可以在其中执行不同类型的定制操作，比如收集顶点数据。
+
+![](../images/Chp4/Chp4-13.png)
+
+`osg::TemplatePrimitiveFunctor<T>` 不仅可以收集特定 **可绘制对象** 的三角面数据，它还拥有获取点、线和四边形的接口。这需要模板参数类型实现特定的操作符函数：
+
+```c++
+void operator() (const osg::Vec3&, bool);
+void operator() (const osg::Vec3&, const osg::Vec3&, bool);
+void operator() (const osg::Vec3&, const osg::Vec3&, const osg::Vec3&, bool);
+void operator() (const osg::Vec3&, const osg::Vec3&,
+                 const osg::Vec3&, const osg::Vec3&, bool);
+```
+
+### 动手实践：分析几何数据拓扑结构
+
+你弄明白如何分析几何图形的拓扑结构了吗？你可能需要一个共享的顶点列表和一个存储这些顶点的面列表，或者一个边列表，每个边都包含两个相邻顶点和两个邻接面。
+
+**仿函数** 将帮助你获取任何 **可绘制对象** 的这些信息。唯一的问题是，你更愿意使用哪种数据结构构造拓扑多边形网格，现在请做出你自己的决定。
+
+
