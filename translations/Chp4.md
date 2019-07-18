@@ -623,4 +623,154 @@ void operator() (const osg::Vec3&, const osg::Vec3&,
 
 **仿函数** 将帮助你获取任何 **可绘制对象** 的这些信息。唯一的问题是，你更愿意使用哪种数据结构构造拓扑多边形网格，现在请做出你自己的决定。
 
+## 4.11 实现自定义可绘制对象
 
+在纯虚类 `osg::Drawabel` 中有两个非常重要的虚函数：
+
+* 常函数 `computeBound()` 计算几何体的包围盒，包围盒将用于视锥体裁剪处理来判断几何图形是否应该被裁减
+* 常函数 `drawImplementation()` 实际调用OSG和OpenGL绘制几何图形
+
+如果要实现自定义的 **可绘制对象** 类，必须重写上述的两个函数并在合适的地方添加自定义的图形绘制代码。
+
+常函数 `computeBound()` 返回一个 `osg::BoundingBox` 类型的对象作为几何体的包围盒。创建包围盒最简单的方法就是设置范围的最小与最大值，这两个值均是一个三元向量。一个范围从(0, 0, 0)到(1, 1, 1)的包围盒可以像如下这样定义：
+
+```c++
+osg::BoundingBox bb(osg::Vec3(0, 0, 0), osg::Vec3(1, 1, 1));
+```
+
+注意 `osg::BoundingBox` 类型的对象不能被 **智能指针** 管理，下一章将要介绍的 `osg::BoundingSphere` 类型对象也是这样。
+
+常函数 `osg::drawImplementation()` 是不同绘图调用的实际实现。它有一个 `osg::RenderInfo&` 类型的参数，这个参数存储了OSG渲染后台的当前渲染参数。这个函数由 `osg::Drawable` 的 `draw()` 函数在内部调用。函数 `draw()` 会通过显示列表按顺序保存 `drawImplementation()` 中的OpenGL调用以供在后续帧中重复使用。这意味着 `osg::Drawable` 实例的 `drawImplementation()` 方法只会被调用一次。
+
+你可以在创建新 **可绘制对象** 时关闭相关选项来避免使用显示列表：
+
+```c++
+drawable->setUseDisplayList(false);
+```
+
+自定义的OpenGL调用将在此之后每帧都会执行，如果 `drawImplementation()` 函数中有几何变形操作或动画时这将非常有用。
+
+## 4.12 使用OpenGL绘图调用
+
+你可以在 `drawImplementation()` 的实现中添加任何OpenGL函数。在进入此函数前，已创建好了渲染上下文 (rendering context)，并完成了OpenGL **make current** 操作。不要释放OpenGL渲染上下文，因为它可能很快就会被其他 **可绘制对象** 使用。
+
+### 动手实践：创建著名的OpenGL茶壶
+
+GLUT库能够直接呈现一个实体茶壶模型。这个茶壶的表面法线和纹理坐标都是使用OpenGL求值器生成的。
+
+你可能想先下载GLUT库，它是作为OpenGL的第三方项目设计的。源代码可以在以下任何一个网站上找到：
+
+* http://www.opengl.org/resources/libraries/glut/
+* http://www.xmission.com/~nate/glut.html
+
+还可以下载预编译的二进制文件、头文件和库，其中包括开始使用GLUT所需的所有内容。
+
+1. 我们必须修改CMake脚本文件来找到GLUT，并将其添加为项目的依赖项:
+
+    ```cmake
+    find_package(glut)
+    add_executable(MyProject teapot.cpp)
+    config_project(MyProject OPENTHREADS)
+    config_project(MyProject OSG)
+    config_project(MyProject OSGDB)
+    config_project(MyProject OSGUTIL)
+    config_project(MyProject GLUT)
+    ```
+
+2. CMake系统可以使用 `find_package()` 宏直接搜索GLUT库，但有时可能会一无所获。您应该将 `GLUT_INCLUDE_DIR` 设置为 `gl/glut.h` 的父目录，将 `GLUT_glut_LIBRARY` 设置为GLUT静态链接库，例如Windows平台上的 `glut32.lib`。单击 *Configure* 和 *Generate* 来生成解决方案或makefile。
+
+    ![](../images/Chp4/Chp4-14.png)
+
+3. 包含必要的头文件，此时还要记住添加GLUT头文件：
+
+    ```c++
+    #include <gl/glut.h>
+    #include <osg/Drawable>
+    #include <osg/Geode>
+    #include <osgViewer/Viewer>
+    ```
+
+4. 我们声明了一个名为 `TeapotDrawable` 的全新类，它派生自 `osg::Drawable` 类。为了确保编译成功，我们必须使用OSG宏定义 `META_Object` 来实现类的一些基本属性。同时还创建了一个复制构造函数来帮助实例化 `TeapotDrawable`。
+
+    ```c++
+    class TeapotDrawable : public osg::Drawable
+    {
+    public:
+        TeapotDrawble(float size = 1.0f) : _size(size) {}
+        TeapotDrawble(const TeapotDrawble& copy,
+                      const osg::CopyOp& copyop = osg::CopyOp::SHALLOW_COPY) :
+                      osg::Drawable(copy, copyop), _size(_copy.size) {}
+        
+        META_Object(osg, TeapotDrawble);
+
+        virtual osg::BoundingBox computeBound() const;
+        virtual void drawImplementation(osg::RenderInfo&) const;
+    
+    protected:
+        float _size;
+    };
+    ```
+
+5. 要以一种简单的方式实现 `computeBound()` 函数，我们可以使用表示茶壶的相对大小的成员变量 `_size` 构造一个足够大的包围盒。最小值为(-_size, -_size, -_size)、最大值为(_size, _size, _size)的包围盒一定能包含茶壶模型：
+
+    ```c++
+    osg::BoundingBox TeapotDrawable::computeBound() const
+    {
+        osg::Vec3 min(-_size, -_size, -_size), max(_size, _size, _size);
+        return osg::BoundingBox(min, max);
+    }
+    ```
+
+6. 函数 `drawImplementation()` 的实现也很简单。利用OpenGL默认的背面剔除机制进行面片剔除，我们仅渲染GLUT茶壶模型正面（顶点顺时针方向旋转）的多边形:
+
+    ```c++
+    void TeapotDrawable::drawImplementation(osg::RenderInfo& renderInfo) const
+    {
+        glFrontFace(GL_CW);
+        glutSolidTeapot(_size);
+        glFrontFace(GL_CCW);
+    }
+    ```
+
+7. `TeapotDrawable` 实例可以添加到 `osg::Geode` 节点，然后由视景器查看，这已经做过很多次了：
+
+    ```c++
+    osg::ref_ptr<osg::Geode> root = new osg::Geode;
+    root->addDrawable(new TeapotDrawable(1.0f));
+
+    osgViewer::Viewer viewer;
+    viewer.setSceneData(root.get());
+    return viewer.run();
+    ```
+
+8. 现在编译并启动应用程序。按住鼠标左键，将你的场景旋转到合适的位置仔细查看茶壶模型：
+
+    ![](../images/Chp4/Chp4-15.png)
+
+#### *总结与探究*
+
+复制构造函数用于创建一个新的 `TeapotDrawable` 实例，作为现有实例的副本。虽然在前面的示例中不需要这个函数，但是任何 `osg::Drawable` 派生类都必须定义它。
+
+另一个宏定义 `META_Object` 对于实现自定义 **可绘制对象** 也是必需的。它有两个参数，表示库名称为 `osg`，类型名称为 `TeapotDrawable`。你随时可以使用以下函数获取这两个字符串值：
+
+```c++
+const char* lib = obj->libraryName();
+const char* name = obj->className();
+```
+
+带有 `META_Object` 宏的OSG类将重新实现这两个方法，几乎所有与场景相关的类均使用了这个宏。
+
+用户自定义的可绘制类型应该始终具有一个复制构造函数和 `META_Object` 宏，并且还应该重写 `computeBound()` 和 `drawImplementation()` 函数，否则可能会导致编译错误。
+
+## 总结
+
+本章解释了如何简单地使用顶点创建几何实体并使用OSG定义的图元绘制它。这些几何图形存储在 `osg::Geode` 对象中，这些对象被识别为场景图的 **叶节点**。三维世界中所有的场景管理和更新都是为了修改几何、传输顶点数据和几何图元，以获得不同的渲染效果。
+
+在这一章中，我们专门讨论了：
+
+* OpenGL **即时模式**、**显示列表** 和 **顶点数组** 的基本概念及其在OSG中的实现。
+* 如何使用 `osg::ShapeDrawable` 类为快速测试渲染简单的形状。
+* 如何使用 `osg::Geometry` 类以更高效的方式创建和渲染各种形状。
+* 如何操作顶点属性数组、索引数组和几何图元集。
+* 如何使用 **仿函数** 读取顶点属性、图元和索引数据，以及如何通过继承和重写成员函数，实现自定义顶点数据。
+* 一种将OpenGL调用集成到自定义 `osg::Drawable` 派生类中的方法，这有助于集成OSG和其他基于OpenGL的库。
